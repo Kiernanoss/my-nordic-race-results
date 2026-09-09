@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "scrape": "node scraper.js --sport nordic --out results.json",
+    "scrape": "node scraper.cjs --sport nordic --out public/results.json",
     "scrape:test": "node scraper.js --sport nordic --max-races 3 --out results.test.json"
   },
   "dependencies": {
