@@ -1,9 +1,18 @@
 {
-  "generatedAt": "2026-09-10T11:50:40.255Z",
+  "generatedAt": "2026-09-10T15:09:16.267Z",
   "source": "https://www.endurancepromotions.com",
   "sport": "nordic",
   "raceCount": 0,
   "rowCount": 0,
   "errorCount": 0,
+  "diagnostics": {
+    "discoveredRacePages": 0,
+    "processedRacePages": 0,
+    "nordicRacePages": 0,
+    "nordicRacesWithRows": 0,
+    "resultFilesRead": 0,
+    "pageVisits": 0
+  },
+  "errors": [],
   "matches": []
 }
