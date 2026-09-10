@@ -21,10 +21,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    # Use the official Playwright image so GitHub does not have
-    # to install Chrome/Chromium through Ubuntu's package system.
-    container: mcr.microsoft.com/playwright:v1.63.0-noble
-
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -37,9 +33,18 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium
+
       - name: Scrape Endurance Promotions
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         run: npm run scrape
+
+      - name: Verify results file
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: |
+          test -f public/results.json
+          node -e "const fs=require('fs'); const d=JSON.parse(fs.readFileSync('public/results.json','utf8')); console.log('Races:', d.raceCount); console.log('Rows:', d.rowCount); console.log('Errors:', d.errorCount);"
 
       - name: Commit updated results
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
