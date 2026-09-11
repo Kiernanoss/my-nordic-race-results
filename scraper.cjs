@@ -13,7 +13,7 @@ const DEFAULTS = {
   out: path.resolve(process.cwd(), 'public', 'results.json'),
 
   // Keep network concurrency reasonable.
-  concurrency: 8,
+  concurrency: 4,
 
   timeout: 20000,
 
