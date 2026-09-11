@@ -38,7 +38,7 @@ jobs:
 
       - name: Scrape Endurance Promotions
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-        run: npm run scrape
+        run: node --max-old-space-size=6144 scraper.cjs --sport nordic --out public/results.json --batch-size 20
 
       - name: Verify results file
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
