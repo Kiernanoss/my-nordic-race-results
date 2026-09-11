@@ -13,7 +13,7 @@ const DEFAULTS = {
   out: path.resolve(process.cwd(), 'public', 'results.json'),
 
   // Keep this fairly low. The website doesn't need 16+ simultaneous requests.
-  concurrency: 4,
+  concurrency: 8,
 
   timeout: 20000,
 
@@ -23,7 +23,7 @@ const DEFAULTS = {
   maxId: 3000,
 
   // Process only this many races before allowing cleanup.
-  batchSize: 10
+  batchSize: 20
 };
 
 const NORDIC_KEYWORDS = [
@@ -43,21 +43,6 @@ const NORDIC_KEYWORDS = [
   'classic',
   'pursuit'
 ];
-
-function looksNordic(r) {
-  const t = norm(
-    `${r.event} ${r.location} ${r.raceType} ${r.description}`
-  );
-
-  return (
-    norm(r.raceType) === 'skiing' ||
-    NORDIC_KEYWORDS.some(k =>
-      t.includes(norm(k))
-    )
-  );
-}
-
-function args(a) {
 
 /* ============================================================
    ARGUMENTS
