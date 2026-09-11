@@ -28,26 +28,70 @@ const DEFAULTS = {
   batchSize: 10
 };
 
-const NORDIC_KEYWORDS = [
-  'nordic',
-  'skiing',
-  'cross country skiing',
-  'cross-country skiing',
-  'cross country ski',
-  'cross-country ski',
-  'xc skiing',
-  'xc ski',
-  'loppet',
-  'birkie',
-  'sisu',
-  'vakava',
-  'rollerski',
-  'roller ski',
-  'roller skiing',
-  'cross country',
-  'classic',
-  'pursuit'
-];
+function looksNordic(r) {
+  const raceType = norm(r.raceType);
+
+  const text = norm(
+    `${r.event} ${r.location} ${r.description}`
+  );
+
+  // Strong positive signal.
+  if (raceType === 'skiing') {
+    return true;
+  }
+
+  // Strong Nordic-specific phrases.
+  const strongKeywords = [
+    'nordic',
+    'cross country skiing',
+    'cross-country skiing',
+    'cross country ski',
+    'cross-country ski',
+    'xc skiing',
+    'xc ski',
+    'rollerski',
+    'roller ski',
+    'roller skiing',
+    'loppet',
+    'birkie',
+    'sisu',
+    'vakava'
+  ];
+
+  if (
+    strongKeywords.some(k =>
+      text.includes(norm(k))
+    )
+  ) {
+    return true;
+  }
+
+  // "classic" and "pursuit" are only useful when
+  // combined with skiing/cross-country context.
+  if (
+    text.includes('classic') &&
+    (
+      text.includes('ski') ||
+      text.includes('cross country') ||
+      text.includes('nordic')
+    )
+  ) {
+    return true;
+  }
+
+  if (
+    text.includes('pursuit') &&
+    (
+      text.includes('ski') ||
+      text.includes('cross country') ||
+      text.includes('nordic')
+    )
+  ) {
+    return true;
+  }
+
+  return false;
+}
 
 function args(a) {
   const o = { ...DEFAULTS };
