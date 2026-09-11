@@ -25,7 +25,7 @@ const DEFAULTS = {
   // IMPORTANT:
   // Results are processed in batches so thousands of race results
   // are never kept in memory at the same time.
-  batchSize: 20
+  batchSize: 10
 };
 
 const NORDIC_KEYWORDS = [
