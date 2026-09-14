@@ -17839,7 +17839,7 @@
     {"firstName":"Harper","lastName":"Peterson 11 St Cloud Appollo/tech/","name":"Harper Peterson 11 St Cloud Appollo/tech/","team":"","school":"","class":"","field":"","city":"","gender":null,"age":null,"bib":"642","place":50,"time":"23:15.4","timeSeconds":1395.4,"sourceAthleteId":null,"event":"2026 Section 5 Nordic Championships","raceDate":"","raceLocation":"","raceType":"","sourceRaceId":"1739","sourceRaceUrl":"https://www.endurancepromotions.com/ResultDetails.aspx?id=1739","sourceResultUrl":"https://www.endurancepromotions.com/uploads/races/2026_Section_5_Girls_Skate_Results.pdf"},
     {"firstName":"Ellie","lastName":"Prom 9 Anoka","name":"Ellie Prom 9 Anoka","team":"","school":"","class":"","field":"","city":"","gender":null,"age":null,"bib":"641","place":51,"time":"24:15.5","timeSeconds":1455.5,"sourceAthleteId":null,"event":"2026 Section 5 Nordic Championships","raceDate":"","raceLocation":"","raceType":"","sourceRaceId":"1739","sourceRaceUrl":"https://www.endurancepromotions.com/ResultDetails.aspx?id=1739","sourceResultUrl":"https://www.endurancepromotions.com/uploads/races/2026_Section_5_Girls_Skate_Results.pdf"}
   ],
-  "generatedAt": "2026-09-14T02:09:15.346Z",
+  "generatedAt": "2026-09-14T02:44:39.619Z",
   "source": "https://www.endurancepromotions.com",
   "sport": "nordic",
   "raceCount": 10,
