@@ -10,43 +10,52 @@ const BASE = 'https://www.endurancepromotions.com';
 
 const DEFAULTS = {
   sport: 'nordic',
-  out: path.resolve(process.cwd(), 'public', 'results.json'),
 
-  // Keep this fairly low. The website doesn't need 16+ simultaneous requests.
-  concurrency: 8,
+  out: path.resolve(
+    process.cwd(),
+    'public',
+    'results.json'
+  ),
+
+  // Keep this low to reduce simultaneous memory use.
+  concurrency: 4,
 
   timeout: 20000,
 
-  // RaceKey discovery
-  blockSize: 250,
-  emptyBlocks: 8,
+  // IMPORTANT:
+  // Your first Nordic race is RaceKey 1723.
+  startId: 1723,
+
+  // Keep this configurable.
   maxId: 3000,
 
-  // Process only this many races before allowing cleanup.
-  batchSize: 20
+  // Discovery requests happen in blocks.
+  blockSize: 250,
+
+  // Stop after several completely empty blocks.
+  emptyBlocks: 8,
+
+  // Process races in small batches.
+  batchSize: 10
 };
 
 const NORDIC_KEYWORDS = [
   'nordic',
   'skiing',
-  'ski',
-  'xc',
-  'cross country',
-  'cross-country',
+  'cross country skiing',
+  'cross-country skiing',
+  'cross country ski',
+  'cross-country ski',
+  'xc skiing',
+  'xc ski',
+  'rollerski',
+  'roller ski',
+  'roller skiing',
   'loppet',
   'birkie',
   'sisu',
-  'vakava',
-  'rollerski',
-  'roller ski',
-  'skate',
-  'classic',
-  'pursuit'
+  'vakava'
 ];
-
-/* ============================================================
-   ARGUMENTS
-   ============================================================ */
 
 function args(a) {
   const o = { ...DEFAULTS };
@@ -71,6 +80,12 @@ function args(a) {
       o.timeout = Math.max(
         1000,
         Number(a[++i]) || DEFAULTS.timeout
+      );
+
+    } else if (a[i] === '--start-id') {
+      o.startId = Math.max(
+        1,
+        Number(a[++i]) || DEFAULTS.startId
       );
 
     } else if (a[i] === '--max-id') {
@@ -98,22 +113,25 @@ node scraper.cjs --sport nordic --out public/results.json
 
 Options:
 
---concurrency 8
---timeout 20000
+--start-id 1723
 --max-id 3000
---batch-size 20
+--batch-size 10
+--concurrency 4
+--timeout 20000
 `);
 
       process.exit(0);
     }
   }
 
+  if (o.maxId < o.startId) {
+    throw new Error(
+      `max-id (${o.maxId}) must be greater than or equal to start-id (${o.startId}).`
+    );
+  }
+
   return o;
 }
-
-/* ============================================================
-   STRING HELPERS
-   ============================================================ */
 
 function clean(v) {
   return String(v ?? '')
@@ -204,38 +222,81 @@ function headerKey(v) {
     .replace(/[^a-z0-9]/g, '');
 }
 
-/* ============================================================
-   NORDIC FILTER
-   ============================================================ */
-
+/*
+ * IMPORTANT:
+ *
+ * We do NOT use the old broad "ski" keyword.
+ *
+ * A cycling race such as:
+ *
+ * 2015 Bayport Belgian CX
+ *
+ * must not be classified as Nordic merely because
+ * something in its text happens to contain "ski".
+ */
 function looksNordic(r) {
-  const t = norm(
-    `${r.event} ${r.location} ${r.raceType} ${r.description}`
+  const raceType = norm(r.raceType);
+
+  const text = norm(
+    `${r.event} ${r.location} ${r.description}`
   );
 
-  return (
-    norm(r.raceType) === 'skiing' ||
+  // Strongest possible signal.
+  if (raceType === 'skiing') {
+    return true;
+  }
+
+  // Strong Nordic-specific phrases.
+  if (
     NORDIC_KEYWORDS.some(k =>
-      t.includes(norm(k))
+      text.includes(norm(k))
     )
-  );
-}
+  ) {
+    return true;
+  }
 
-/* ============================================================
-   HTML PARSING
-   ============================================================ */
+  // "classic" and "pursuit" only count when
+  // the surrounding race information also mentions skiing.
+  if (
+    text.includes('classic') &&
+    (
+      text.includes('ski') ||
+      text.includes('cross country') ||
+      text.includes('nordic')
+    )
+  ) {
+    return true;
+  }
+
+  if (
+    text.includes('pursuit') &&
+    (
+      text.includes('ski') ||
+      text.includes('cross country') ||
+      text.includes('nordic')
+    )
+  ) {
+    return true;
+  }
+
+  return false;
+}
 
 function parseTables(html) {
   const tables = [];
 
-  for (const tm of String(html).matchAll(
-    /<table\b[^>]*>([\s\S]*?)<\/table>/gi
-  )) {
+  for (
+    const tm of String(html).matchAll(
+      /<table\b[^>]*>([\s\S]*?)<\/table>/gi
+    )
+  ) {
     const rows = [];
 
-    for (const rm of tm[1].matchAll(
-      /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi
-    )) {
+    for (
+      const rm of tm[1].matchAll(
+        /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi
+      )
+    ) {
       const cells = [
         ...rm[1].matchAll(
           /<(?:th|td)\b[^>]*>([\s\S]*?)<\/(?:th|td)>/gi
@@ -258,9 +319,11 @@ function parseTables(html) {
 function parseLinks(html) {
   const out = [];
 
-  for (const m of String(html).matchAll(
-    /<a\b[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi
-  )) {
+  for (
+    const m of String(html).matchAll(
+      /<a\b[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi
+    )
+  ) {
     const href = abs(m[1]);
 
     if (href) {
@@ -280,11 +343,14 @@ function findHeader(rows, required) {
     i < Math.min(rows.length, 15);
     i++
   ) {
-    const ks = rows[i].map(headerKey);
+    const ks =
+      rows[i].map(headerKey);
 
     if (
       required.every(x =>
-        ks.includes(headerKey(x))
+        ks.includes(
+          headerKey(x)
+        )
       )
     ) {
       return i;
@@ -294,16 +360,15 @@ function findHeader(rows, required) {
   return -1;
 }
 
-/* ============================================================
-   RESULT TABLE PARSER
-   ============================================================ */
-
 function rowsFromTable(rows) {
-  const hi = findHeader(rows, [
-    'First Name',
-    'Last Name',
-    'Total Time'
-  ]);
+  const hi = findHeader(
+    rows,
+    [
+      'First Name',
+      'Last Name',
+      'Total Time'
+    ]
+  );
 
   if (hi < 0) {
     return [];
@@ -311,15 +376,25 @@ function rowsFromTable(rows) {
 
   const h = {};
 
-  rows[hi].forEach((v, i) => {
-    h[headerKey(v)] = i;
-  });
+  rows[hi].forEach(
+    (v, i) => {
+      h[headerKey(v)] = i;
+    }
+  );
 
-  const get = (r, ...names) => {
-    for (const n of names) {
-      const i = h[headerKey(n)];
+  const get = (
+    r,
+    ...names
+  ) => {
+    for (
+      const n of names
+    ) {
+      const i =
+        h[headerKey(n)];
 
-      if (i !== undefined) {
+      if (
+        i !== undefined
+      ) {
         return clean(r[i]);
       }
     }
@@ -329,22 +404,23 @@ function rowsFromTable(rows) {
 
   const out = [];
 
-  for (const r of rows.slice(hi + 1)) {
-    const first = get(
-      r,
-      'First Name'
-    );
+  for (
+    const r of rows.slice(
+      hi + 1
+    )
+  ) {
+    const first =
+      get(r, 'First Name');
 
-    const last = get(
-      r,
-      'Last Name'
-    );
+    const last =
+      get(r, 'Last Name');
 
-    const time = get(
-      r,
-      'Total Time',
-      'Time'
-    );
+    const time =
+      get(
+        r,
+        'Total Time',
+        'Time'
+      );
 
     if (
       (!first && !last) ||
@@ -353,17 +429,19 @@ function rowsFromTable(rows) {
       continue;
     }
 
-    const place = get(
-      r,
-      'Pos',
-      'Place'
-    );
+    const place =
+      get(
+        r,
+        'Pos',
+        'Place'
+      );
 
-    const bib = get(
-      r,
-      'Bib #',
-      'Bib'
-    );
+    const bib =
+      get(
+        r,
+        'Bib #',
+        'Bib'
+      );
 
     out.push({
       firstName: first,
@@ -373,32 +451,28 @@ function rowsFromTable(rows) {
         `${first} ${last}`
       ),
 
-      team: get(
-        r,
-        'Team',
-        'School'
-      ),
+      team:
+        get(
+          r,
+          'Team',
+          'School'
+        ),
 
-      school: get(
-        r,
-        'School',
-        'Team'
-      ),
+      school:
+        get(
+          r,
+          'School',
+          'Team'
+        ),
 
-      class: get(
-        r,
-        'Class'
-      ),
+      class:
+        get(r, 'Class'),
 
-      field: get(
-        r,
-        'Field'
-      ),
+      field:
+        get(r, 'Field'),
 
-      city: get(
-        r,
-        'City'
-      ),
+      city:
+        get(r, 'City'),
 
       gender:
         get(r, 'Gender') ||
@@ -420,25 +494,26 @@ function rowsFromTable(rows) {
         timeSec(time),
 
       sourceAthleteId:
-        get(r, 'ResultsKey') ||
-        null
+        get(
+          r,
+          'ResultsKey'
+        ) || null
     });
   }
 
   return out;
 }
 
-/* ============================================================
-   TEXT RESULT PARSER
-   ============================================================ */
-
 function parseText(text) {
   const out = [];
 
   for (
-    const raw of String(text || '').split(/\r?\n/)
+    const raw of String(
+      text || ''
+    ).split(/\r?\n/)
   ) {
-    const s = clean(raw);
+    const s =
+      clean(raw);
 
     if (
       !s ||
@@ -448,30 +523,34 @@ function parseText(text) {
       continue;
     }
 
-    const m = s.match(
-      /^(\d+)\s+(\d+)\s+(.+?)\s+(\d{1,3}:\d{2}(?:\.\d+)?)$/
-    );
+    const m =
+      s.match(
+        /^(\d+)\s+(\d+)\s+(.+?)\s+(\d{1,3}:\d{2}(?:\.\d+)?)$/
+      );
 
     if (!m) {
       continue;
     }
 
-    const n = splitName(m[3]);
+    const n =
+      splitName(m[3]);
 
     out.push({
-      firstName: n.firstName,
-      lastName: n.lastName,
+      firstName:
+        n.firstName,
+
+      lastName:
+        n.lastName,
 
       name:
-        n.firstName +
-        ' ' +
-        n.lastName,
+        `${n.firstName} ${n.lastName}`,
 
       team: '',
       school: '',
       class: '',
       field: '',
       city: '',
+
       gender: null,
       age: null,
 
@@ -480,77 +559,92 @@ function parseText(text) {
       place:
         Number(m[1]),
 
-      time: m[4],
+      time:
+        m[4],
 
       timeSeconds:
         timeSec(m[4]),
 
-      sourceAthleteId: null
+      sourceAthleteId:
+        null
     });
   }
 
   return out;
 }
 
-/* ============================================================
-   RACE METADATA
-   ============================================================ */
-
+/*
+ * Extract race metadata from the page.
+ *
+ * We deliberately use whitespace-flexible regexes because
+ * Endurance Promotions sometimes renders the metadata on
+ * one line and sometimes with different HTML spacing.
+ */
 function raceMeta(html, id) {
-  const text = strip(html);
+  const raw =
+    String(html || '');
+
+  const text =
+    strip(raw);
 
   const title =
     (
       text.match(
-        /Individual Results for\s+([^\n]+)/i
+        /Individual Results for\s+(.+?)(?=\s+Race Details\s+Race Type|\s+Race Details|$)/i
       ) || []
     )[1] || '';
 
   const raceType =
     (
       text.match(
-        /Race Type\s*\|\s*([^\n|]+)/i
+        /Race Type\s*\|\s*([^\|]+?)(?=\s+Race Date\s*\||$)/i
       ) || []
     )[1] || '';
 
   const date =
     (
       text.match(
-        /Race Date\s*\|\s*([^\n|]+)/i
+        /Race Date\s*\|\s*([^\|]+?)(?=\s+Race Location\s*\||$)/i
       ) || []
     )[1] || '';
 
   const location =
     (
       text.match(
-        /Race Location\s*\|\s*([^\n|]+)/i
+        /Race Location\s*\|\s*([^\|]+?)(?=\s+Race Description\s*\||$)/i
       ) || []
     )[1] || '';
 
   const desc =
     (
       text.match(
-        /Race Description\s*\|\s*([\s\S]*?)(?:Search by|Filter by|ResultsKey|$)/i
+        /Race Description\s*\|\s*(.*?)(?=\s+Filter by Field:|\s+Search by Bib#|\s+ResultsKey\s*\||$)/i
       ) || []
     )[1] || '';
 
   return {
     id: String(id),
-    event: clean(title),
-    raceType: clean(raceType),
-    date: clean(date),
-    location: clean(location),
-    description: clean(desc)
+
+    event:
+      clean(title),
+
+    raceType:
+      clean(raceType),
+
+    date:
+      clean(date),
+
+    location:
+      clean(location),
+
+    description:
+      clean(desc)
   };
 }
 
-/* ============================================================
-   HTTP
-   ============================================================ */
-
 async function fetchText(
   url,
-  timeout = 20000,
+  timeout = DEFAULTS.timeout,
   attempt = 0
 ) {
   const controller =
@@ -599,7 +693,6 @@ async function fetchText(
     };
 
   } catch (e) {
-
     if (attempt < 2) {
       return fetchText(
         url,
@@ -610,19 +703,21 @@ async function fetchText(
 
     return {
       status: 0,
+
       url,
+
       body: '',
-      error: e.message
+
+      error:
+        e.message
     };
 
   } finally {
-    clearTimeout(timer);
+    clearTimeout(
+      timer
+    );
   }
 }
-
-/* ============================================================
-   CONCURRENCY LIMIT
-   ============================================================ */
 
 async function mapLimit(
   items,
@@ -630,13 +725,16 @@ async function mapLimit(
   fn
 ) {
   const out =
-    new Array(items.length);
+    new Array(
+      items.length
+    );
 
   let next = 0;
 
   async function worker() {
     while (true) {
-      const i = next++;
+      const i =
+        next++;
 
       if (
         i >= items.length
@@ -668,36 +766,48 @@ async function mapLimit(
   return out;
 }
 
-/* ============================================================
-   RACEKEY DISCOVERY
-   ============================================================ */
-
+/*
+ * DISCOVER RACES
+ *
+ * Starts at RaceKey 1723 by default.
+ *
+ * This means we no longer waste time probing
+ * RaceKeys 1-1722.
+ */
 async function discoverByIds(a) {
   console.log(
-    'DISCOVERY: Starting automatic RaceKey discovery.'
+    `DISCOVERY: starting at RaceKey ${a.startId}`
   );
 
   console.log(
-    `DISCOVERY: Searching RaceKey 1-${a.maxId}`
+    `DISCOVERY: scanning through RaceKey ${a.maxId}`
   );
 
-  let start = 1;
+  console.log(
+    'DISCOVERY: only race metadata is retained.'
+  );
 
-  let end =
-    Math.min(
-      a.blockSize,
-      a.maxId
-    );
+  let start =
+    a.startId;
 
-  let emptyBlocks = 0;
+  let empty =
+    0;
 
   const found =
     new Map();
 
   while (
     start <= a.maxId &&
-    emptyBlocks < a.emptyBlocks
+    empty < a.emptyBlocks
   ) {
+    const end =
+      Math.min(
+        start +
+          a.blockSize -
+          1,
+        a.maxId
+      );
+
     const ids = [];
 
     for (
@@ -713,7 +823,6 @@ async function discoverByIds(a) {
         ids,
         a.concurrency,
         async id => {
-
           const url =
             `${BASE}/ResultDetails.aspx?id=${id}`;
 
@@ -737,28 +846,19 @@ async function discoverByIds(a) {
             );
 
           /*
-           * A valid ResultDetails page should
-           * have some recognizable race information.
+           * A real ResultDetails page should have
+           * an event name or race type.
            */
           if (
             !race.event &&
-            !race.raceType &&
-            !response.body.includes(
-              'Result Details'
-            )
+            !race.raceType
           ) {
             return null;
           }
 
-          /*
-           * IMPORTANT:
-           *
-           * We DO NOT store response.body.
-           *
-           * Only metadata and URL are kept.
-           */
           return {
             ...race,
+
             url
           };
         }
@@ -767,7 +867,9 @@ async function discoverByIds(a) {
     const hits =
       results.filter(Boolean);
 
-    for (const race of hits) {
+    for (
+      const race of hits
+    ) {
       found.set(
         race.id,
         race
@@ -775,25 +877,19 @@ async function discoverByIds(a) {
     }
 
     console.log(
-      `DISCOVERY: RaceKey ${start}-${end} -> ${hits.length} valid pages (total ${found.size})`
+      `DISCOVERY: ${start}-${end}: ${hits.length} valid pages (total ${found.size})`
     );
 
     if (
       hits.length === 0
     ) {
-      emptyBlocks++;
+      empty++;
     } else {
-      emptyBlocks = 0;
+      empty = 0;
     }
 
     start =
       end + 1;
-
-    end =
-      Math.min(
-        end + a.blockSize,
-        a.maxId
-      );
   }
 
   return [
@@ -801,10 +897,9 @@ async function discoverByIds(a) {
   ];
 }
 
-/* ============================================================
-   PROCESS ONE RACE
-   ============================================================ */
-
+/*
+ * Process one race.
+ */
 async function processRace(
   race,
   a,
@@ -818,42 +913,43 @@ async function processRace(
 
   stats.nordic++;
 
-  const rows = [];
+  const all = [];
 
-  const addRows = (
-    parsedRows,
-    sourceUrl
-  ) => {
-    for (
-      const row of parsedRows
-    ) {
-      rows.push({
-        ...row,
+  const addRows =
+    (
+      rows,
+      sourceUrl
+    ) => {
+      for (
+        const row of rows
+      ) {
+        all.push({
+          ...row,
 
-        event:
-          race.event,
+          event:
+            race.event,
 
-        raceDate:
-          race.date,
+          raceDate:
+            race.date,
 
-        raceLocation:
-          race.location,
+          raceLocation:
+            race.location,
 
-        raceType:
-          race.raceType,
+          raceType:
+            race.raceType,
 
-        sourceRaceId:
-          race.id,
+          sourceRaceId:
+            race.id,
 
-        sourceRaceUrl:
-          race.url,
+          sourceRaceUrl:
+            race.url,
 
-        sourceResultUrl:
-          sourceUrl ||
-          race.url
-      });
-    }
-  };
+          sourceResultUrl:
+            sourceUrl ||
+            race.url
+        });
+      }
+    };
 
   const seenPages =
     new Set();
@@ -862,17 +958,14 @@ async function processRace(
     new Map();
 
   /*
-   * Download result pages one at a time.
-   *
-   * This avoids having many large HTML documents
-   * sitting in memory simultaneously.
+   * Read the main result grid.
    */
   for (
     let pageNo = 1;
     pageNo <= 200;
     pageNo++
   ) {
-    const url =
+    const pageUrl =
       new URL(
         race.url
       );
@@ -880,7 +973,7 @@ async function processRace(
     if (
       pageNo > 1
     ) {
-      url.searchParams.set(
+      pageUrl.searchParams.set(
         'ctl00_cphMain_grdIndividualResultsChangePage',
         `${pageNo}_50`
       );
@@ -888,7 +981,7 @@ async function processRace(
 
     const response =
       await fetchText(
-        url.href,
+        pageUrl.href,
         a.timeout
       );
 
@@ -903,32 +996,30 @@ async function processRace(
         response.body
       );
 
-    let rowsFound = 0;
+    let rowsFound =
+      0;
 
     for (
       const table of tables
     ) {
-      const parsed =
+      const rows =
         rowsFromTable(
           table
         );
 
       if (
-        parsed.length
+        rows.length
       ) {
         addRows(
-          parsed,
-          url.href
+          rows,
+          pageUrl.href
         );
 
         rowsFound +=
-          parsed.length;
+          rows.length;
       }
     }
 
-    /*
-     * Find links to TXT/PDF/child result pages.
-     */
     const links =
       parseLinks(
         response.body
@@ -953,12 +1044,22 @@ async function processRace(
     }
 
     seenPages.add(
-      url.href
+      pageUrl.href
     );
 
     /*
-     * If the first page doesn't tell us that
-     * there are multiple pages, stop.
+     * Stop if the next result page is empty.
+     */
+    if (
+      pageNo > 1 &&
+      rowsFound === 0
+    ) {
+      break;
+    }
+
+    /*
+     * Determine the number of result pages
+     * from the first page.
      */
     if (
       pageNo === 1
@@ -970,42 +1071,38 @@ async function processRace(
           /(\d+)\s+items?\s+in\s+(\d+)\s+pages?/i
         );
 
+      if (!pageInfo) {
+        break;
+      }
+
+      const totalPages =
+        Number(
+          pageInfo[2]
+        );
+
       if (
-        !pageInfo ||
-        Number(pageInfo[2]) <= 1
+        totalPages <= 1
       ) {
         break;
       }
     }
-
-    /*
-     * If a later page produces no results,
-     * stop requesting pages.
-     */
-    if (
-      pageNo > 1 &&
-      rowsFound === 0
-    ) {
-      break;
-    }
   }
 
   /*
-   * Process linked result pages/files.
+   * Process linked result pages and files.
    */
   for (
     const link of fileLinks.values()
   ) {
-
     /*
-     * Child ResultDetails page
+     * Some races link to other ResultDetails pages
+     * for individual race components.
      */
     if (
       /ResultDetails\.aspx/i.test(
         link.href
       )
     ) {
-
       if (
         seenPages.has(
           link.href
@@ -1023,17 +1120,15 @@ async function processRace(
       if (
         response.body
       ) {
-        const childId =
-          new URL(
-            link.href
-          ).searchParams.get(
-            'id'
-          ) || race.id;
-
         const child =
           raceMeta(
             response.body,
-            childId
+
+            new URL(
+              link.href
+            ).searchParams.get(
+              'id'
+            ) || race.id
           );
 
         if (
@@ -1047,19 +1142,12 @@ async function processRace(
           for (
             const table of tables
           ) {
-            const parsed =
+            addRows(
               rowsFromTable(
                 table
-              );
-
-            if (
-              parsed.length
-            ) {
-              addRows(
-                parsed,
-                link.href
-              );
-            }
+              ),
+              link.href
+            );
           }
 
           stats.childPages++;
@@ -1070,7 +1158,7 @@ async function processRace(
     }
 
     /*
-     * TXT or PDF result file
+     * Text/PDF result files.
      */
     const response =
       await fetchText(
@@ -1089,16 +1177,16 @@ async function processRace(
         link.href
       )
     ) {
-      const parsed =
+      const rows =
         parseText(
           response.body
         );
 
       if (
-        parsed.length
+        rows.length
       ) {
         addRows(
-          parsed,
+          rows,
           link.href
         );
 
@@ -1110,7 +1198,6 @@ async function processRace(
         link.href
       )
     ) {
-
       try {
         const pdfResponse =
           await fetch(
@@ -1118,7 +1205,7 @@ async function processRace(
             {
               headers: {
                 'User-Agent':
-                  'Mozilla/5.0 (compatible; MyNordicRaceResults/1.0)'
+                  'Mozilla/5.0'
               }
             }
           );
@@ -1134,49 +1221,49 @@ async function processRace(
             await pdfResponse.arrayBuffer()
           );
 
-        const parsedPdf =
+        const parsed =
           await pdfParse(
             buffer
           );
 
-        const parsed =
+        const rows =
           parseText(
-            parsedPdf.text
+            parsed.text
           );
 
         if (
-          parsed.length
+          rows.length
         ) {
           addRows(
-            parsed,
+            rows,
             link.href
           );
 
           stats.pdf++;
         }
-
       } catch {
         /*
-         * One bad PDF should never stop
-         * the entire scraper.
+         * Ignore an individual PDF failure.
          */
       }
     }
   }
 
   if (
-    rows.length
+    all.length
   ) {
     stats.racesWithRows++;
   }
 
-  return rows;
+  return all;
 }
 
-/* ============================================================
-   DUPLICATE KEY
-   ============================================================ */
-
+/*
+ * Small duplicate key.
+ *
+ * We retain only this string in memory,
+ * not duplicate result objects.
+ */
 function rowKey(r) {
   return [
     r.sourceAthleteId || '',
@@ -1189,11 +1276,7 @@ function rowKey(r) {
   ].join('|');
 }
 
-/* ============================================================
-   DEDUPE A BATCH
-   ============================================================ */
-
-function dedupeBatch(
+function dedupeRows(
   rows,
   seen
 ) {
@@ -1213,95 +1296,50 @@ function dedupeBatch(
 
     seen.add(key);
 
-    unique.push(row);
+    unique.push(
+      row
+    );
   }
 
   return unique;
 }
 
-/* ============================================================
-   APPEND NDJSON
-   ============================================================ */
-
-async function appendNdjson(
-  file,
-  rows
-) {
-  if (
-    !rows.length
-  ) {
-    return;
-  }
-
-  const handle =
-    await fs.open(
-      file,
-      'a'
-    );
-
-  try {
-    let buffer = '';
-
-    for (
-      const row of rows
-    ) {
-      buffer +=
-        JSON.stringify(row) +
-        '\n';
-
-      /*
-       * Don't build a giant string.
-       */
-      if (
-        buffer.length >=
-        1024 * 1024
-      ) {
-        await handle.write(
-          buffer
-        );
-
-        buffer = '';
-      }
-    }
-
-    if (
-      buffer
-    ) {
-      await handle.write(
-        buffer
-      );
-    }
-
-  } finally {
-    await handle.close();
-  }
-}
-
-/* ============================================================
-   BUILD FINAL JSON
-   ============================================================ */
-
-async function buildFinalJson(
-  ndjsonFile,
-  outputFile,
-  metadata
+/*
+ * STREAM RESULTS DIRECTLY INTO ONE TEMP JSON FILE.
+ *
+ * This replaces the old giant NDJSON file.
+ *
+ * There is now only ONE temporary results file,
+ * and we never keep the complete result set in memory.
+ */
+async function createStreamingOutput(
+  out
 ) {
   await fs.mkdir(
-    path.dirname(
-      outputFile
-    ),
+    path.dirname(out),
     {
       recursive: true
     }
   );
 
-  const tempOutput =
-    outputFile +
-    '.tmp';
+  const tmp =
+    out + '.tmp';
 
-  const output =
+  /*
+   * Remove an abandoned temporary file from
+   * a previous failed run.
+   */
+  try {
+    await fs.unlink(
+      tmp
+    );
+  } catch {
+    // Nothing to remove.
+  }
+
+  const stream =
     fsSync.createWriteStream(
-      tempOutput,
+      tmp,
       {
         encoding: 'utf8'
       }
@@ -1311,15 +1349,14 @@ async function buildFinalJson(
     chunk =>
       new Promise(
         (resolve, reject) => {
-
           if (
-            output.write(
+            stream.write(
               chunk
             )
           ) {
             resolve();
           } else {
-            output.once(
+            stream.once(
               'drain',
               resolve
             );
@@ -1327,118 +1364,54 @@ async function buildFinalJson(
         }
       );
 
+  /*
+   * matches comes first.
+   *
+   * JSON property order does not matter.
+   *
+   * Metadata is written after all matches are
+   * known, which lets us stream the huge result
+   * dataset without a second copy.
+   */
   await write(
     '{\n' +
+    '  "matches": [\n'
+  );
 
-    `  "generatedAt": ${JSON.stringify(
-      metadata.generatedAt
-    )},\n` +
+  return {
+    tmp,
+    stream,
+    write
+  };
+}
 
-    `  "source": ${JSON.stringify(
-      metadata.source
-    )},\n` +
-
-    `  "sport": ${JSON.stringify(
-      metadata.sport
-    )},\n` +
-
+async function finishStreamingOutput(
+  output,
+  metadata
+) {
+  await output.write(
+    '\n  ],\n' +
+    `  "generatedAt": ${JSON.stringify(metadata.generatedAt)},\n` +
+    `  "source": ${JSON.stringify(metadata.source)},\n` +
+    `  "sport": ${JSON.stringify(metadata.sport)},\n` +
     `  "raceCount": ${metadata.raceCount},\n` +
-
     `  "rowCount": ${metadata.rowCount},\n` +
-
     `  "errorCount": ${metadata.errorCount},\n` +
-
     '  "diagnostics": ' +
-
     JSON.stringify(
       metadata.diagnostics,
       null,
       2
     ) +
-
-    ',\n' +
-
-    '  "matches": [\n'
-  );
-
-  let first =
-    true;
-
-  const input =
-    fsSync.createReadStream(
-      ndjsonFile,
-      {
-        encoding: 'utf8'
-      }
-    );
-
-  let leftover =
-    '';
-
-  for await (
-    const chunk of input
-  ) {
-    leftover += chunk;
-
-    const lines =
-      leftover.split('\n');
-
-    leftover =
-      lines.pop() || '';
-
-    for (
-      const line of lines
-    ) {
-      if (
-        !line.trim()
-      ) {
-        continue;
-      }
-
-      if (
-        !first
-      ) {
-        await write(
-          ',\n'
-        );
-      }
-
-      await write(
-        '    ' +
-        line.trim()
-      );
-
-      first = false;
-    }
-  }
-
-  if (
-    leftover.trim()
-  ) {
-    if (
-      !first
-    ) {
-      await write(
-        ',\n'
-      );
-    }
-
-    await write(
-      '    ' +
-      leftover.trim()
-    );
-  }
-
-  await write(
-    '\n  ]\n}\n'
+    '\n}\n'
   );
 
   await new Promise(
     (resolve, reject) => {
-      output.end(
-        err => {
-          if (err) {
-            reject(err);
+      output.stream.end(
+        error => {
+          if (error) {
+            reject(error);
           } else {
             resolve();
           }
@@ -1448,46 +1421,43 @@ async function buildFinalJson(
   );
 
   await fs.rename(
-    tempOutput,
-    outputFile
+    output.tmp,
+    metadata.out
   );
 }
 
-/* ============================================================
-   PROTECT PREVIOUS GOOD RESULTS
-   ============================================================ */
-
-async function verifyPrevious(
-  outputFile,
-  newRowCount
+/*
+ * Check that a previous good result file isn't
+ * being replaced by a completely empty run.
+ */
+async function previousRowCount(
+  out
 ) {
-  let previous = null;
-
   try {
-    previous =
-      JSON.parse(
-        await fs.readFile(
-          outputFile,
-          'utf8'
-        )
+    const text =
+      await fs.readFile(
+        out,
+        'utf8'
       );
-  } catch {
-    return;
-  }
 
-  if (
-    newRowCount === 0 &&
-    previous?.rowCount > 0
-  ) {
-    throw new Error(
-      `Refusing to overwrite ${outputFile}: scraper returned 0 rows while previous file contains ${previous.rowCount}.`
-    );
+    /*
+     * We only need the number.
+     *
+     * Do NOT parse the entire JSON object.
+     */
+    const match =
+      text.match(
+        /"rowCount"\s*:\s*(\d+)/
+      );
+
+    return match
+      ? Number(match[1])
+      : 0;
+
+  } catch {
+    return 0;
   }
 }
-
-/* ============================================================
-   MAIN
-   ============================================================ */
 
 async function main() {
   const a =
@@ -1496,19 +1466,15 @@ async function main() {
     );
 
   console.log(
-    '=================================================='
+    'Endurance Promotions Nordic scraper v7'
   );
 
   console.log(
-    'Endurance Promotions automatic Nordic scraper'
+    `Starting RaceKey: ${a.startId}`
   );
 
   console.log(
-    'Memory-safe batched version'
-  );
-
-  console.log(
-    '=================================================='
+    `Maximum RaceKey: ${a.maxId}`
   );
 
   console.log(
@@ -1519,68 +1485,36 @@ async function main() {
     `Concurrency: ${a.concurrency}`
   );
 
-  console.log(
-    `Maximum RaceKey: ${a.maxId}`
-  );
-
-  console.log(
-    `Output: ${a.out}`
-  );
-
-  console.log(
-    ''
-  );
-
   /*
-   * ==========================================================
-   * STEP 1: DISCOVER ALL RACES
-   * ==========================================================
+   * STEP 1
+   *
+   * Discover only RaceKeys beginning at 1723.
    */
-
   const races =
     await discoverByIds(a);
-
-  console.log(
-    ''
-  );
 
   console.log(
     `DISCOVERY COMPLETE: ${races.length} race pages discovered.`
   );
 
   /*
-   * ==========================================================
-   * STEP 2: PREPARE TEMPORARY FILE
-   * ==========================================================
+   * STEP 2
+   *
+   * Create the one temporary streaming JSON file.
    */
-
-  await fs.mkdir(
-    path.dirname(a.out),
-    {
-      recursive: true
-    }
-  );
-
-  const ndjsonFile =
-    a.out +
-    '.ndjson.tmp';
-
-  /*
-   * Delete previous temporary file.
-   */
-  try {
-    await fs.unlink(
-      ndjsonFile
+  const output =
+    await createStreamingOutput(
+      a.out
     );
-  } catch {
-    // Doesn't exist.
-  }
+
+  let firstRow =
+    true;
 
   /*
-   * ==========================================================
-   * STEP 3: STATS
-   * ==========================================================
+   * Only duplicate keys are retained.
    */
+  const seen =
+    new Set();
 
   const stats = {
     nordic: 0,
@@ -1590,42 +1524,29 @@ async function main() {
     childPages: 0
   };
 
-  /*
-   * Only duplicate KEYS are stored in memory.
-   *
-   * Result objects themselves are written to disk
-   * after every race.
-   */
-  const seen =
-    new Set();
-
   let totalRows =
     0;
 
-  let racesWithResults =
+  let raceCount =
+    0;
+
+  let errors =
     0;
 
   /*
-   * ==========================================================
-   * STEP 4: PROCESS RACES IN BATCHES
-   * ==========================================================
+   * STEP 3
+   *
+   * Process Nordic races in batches of 10.
    */
-
   for (
     let start = 0;
     start < races.length;
     start += a.batchSize
   ) {
-    const batchNumber =
-      Math.floor(
-        start /
-        a.batchSize
-      ) + 1;
-
-    const batchEnd =
+    const end =
       Math.min(
         start +
-        a.batchSize,
+          a.batchSize,
         races.length
       );
 
@@ -1634,43 +1555,25 @@ async function main() {
     );
 
     console.log(
-      '=================================================='
+      `========== BATCH ${Math.floor(start / a.batchSize) + 1} ==========`
     );
 
     console.log(
-      `BATCH ${batchNumber}`
+      `Races ${start + 1}-${end} of ${races.length}`
     );
-
-    console.log(
-      `Races ${start + 1}-${batchEnd} of ${races.length}`
-    );
-
-    console.log(
-      '=================================================='
-    );
-
-    /*
-     * IMPORTANT:
-     *
-     * We process each race individually.
-     *
-     * We do NOT use:
-     *
-     * all.push(...)
-     *
-     * for the entire scraper.
-     */
 
     for (
-      let j = start;
-      j < batchEnd;
-      j++
+      let index = start;
+      index < end;
+      index++
     ) {
       const race =
-        races[j];
+        races[index];
 
       /*
-       * Skip cycling/running/etc.
+       * Do not print every non-Nordic race.
+       *
+       * This keeps the GitHub Actions log much smaller.
        */
       if (
         !looksNordic(race)
@@ -1679,7 +1582,7 @@ async function main() {
       }
 
       console.log(
-        `RACE ${j + 1}/${races.length}: ${race.event} | ${race.date} | ${race.raceType}`
+        `RACE ${index + 1}/${races.length}: ${race.event} | ${race.date} | ${race.raceType} | RaceKey ${race.id}`
       );
 
       try {
@@ -1690,60 +1593,57 @@ async function main() {
             stats
           );
 
-        /*
-         * Remove duplicate rows.
-         */
         const unique =
-          dedupeBatch(
+          dedupeRows(
             rows,
             seen
           );
 
-        /*
-         * Write immediately.
-         */
         if (
           unique.length
         ) {
-          await appendNdjson(
-            ndjsonFile,
-            unique
-          );
+          raceCount++;
 
-          totalRows +=
-            unique.length;
+          for (
+            const row of unique
+          ) {
+            if (
+              !firstRow
+            ) {
+              await output.write(
+                ',\n'
+              );
+            }
 
-          racesWithResults++;
+            await output.write(
+              '    ' +
+              JSON.stringify(row)
+            );
+
+            firstRow =
+              false;
+
+            totalRows++;
+          }
         }
 
         /*
-         * Explicitly release references.
+         * Release the race's result objects.
          */
-        unique.length = 0;
         rows.length = 0;
 
       } catch (error) {
+        errors++;
 
         console.warn(
           `RACE ERROR ${race.id}: ${error.message}`
         );
       }
-
-      /*
-       * Every race gets a chance to be
-       * garbage collected.
-       */
-      if (
-        typeof global.gc ===
-        'function'
-      ) {
-        global.gc();
-      }
     }
 
     /*
-     * Let the JavaScript runtime clean up
-     * between batches.
+     * Force garbage collection if GitHub's Node
+     * process was started with --expose-gc.
      */
     if (
       typeof global.gc ===
@@ -1753,48 +1653,58 @@ async function main() {
     }
 
     console.log(
-      ''
+      `BATCH COMPLETE: ${end}/${races.length}`
     );
 
     console.log(
-      `BATCH ${batchNumber} COMPLETE`
-    );
-
-    console.log(
-      `Progress: ${batchEnd}/${races.length} races`
-    );
-
-    console.log(
-      `Nordic races found so far: ${stats.nordic}`
-    );
-
-    console.log(
-      `Races with results so far: ${racesWithResults}`
-    );
-
-    console.log(
-      `Unique result rows so far: ${totalRows}`
+      `RESULTS SO FAR: ${raceCount} races, ${totalRows} unique rows`
     );
   }
 
   /*
-   * ==========================================================
-   * STEP 5: VERIFY RESULTS
-   * ==========================================================
+   * STEP 4
+   *
+   * Protect an existing good results file.
    */
+  const oldRows =
+    await previousRowCount(
+      a.out
+    );
 
-  await verifyPrevious(
-    a.out,
-    totalRows
-  );
+  if (
+    totalRows === 0 &&
+    oldRows > 0
+  ) {
+    /*
+     * Close/remove the temporary output.
+     */
+    try {
+      output.stream.destroy();
+    } catch {
+      // Ignore.
+    }
+
+    try {
+      await fs.unlink(
+        output.tmp
+      );
+    } catch {
+      // Ignore.
+    }
+
+    throw new Error(
+      `Refusing to overwrite ${a.out}: scraper returned 0 rows while previous file contains ${oldRows} rows.`
+    );
+  }
 
   /*
-   * ==========================================================
-   * STEP 6: BUILD FINAL results.json
-   * ==========================================================
+   * STEP 5
+   *
+   * Finish the JSON document.
    */
-
   const metadata = {
+    out: a.out,
+
     generatedAt:
       new Date().toISOString(),
 
@@ -1804,18 +1714,23 @@ async function main() {
     sport:
       a.sport,
 
-    raceCount:
-      racesWithResults,
+    raceCount,
 
     rowCount:
       totalRows,
 
     errorCount:
-      0,
+      errors,
 
     diagnostics: {
       racePagesDiscovered:
         races.length,
+
+      startRaceKey:
+        a.startId,
+
+      maxRaceKey:
+        a.maxId,
 
       nordicRaces:
         stats.nordic,
@@ -1836,10 +1751,7 @@ async function main() {
         a.batchSize,
 
       concurrency:
-        a.concurrency,
-
-      maxRaceKey:
-        a.maxId
+        a.concurrency
     }
   };
 
@@ -1848,55 +1760,19 @@ async function main() {
   );
 
   console.log(
-    '=================================================='
-  );
-
-  console.log(
-    'FINAL RESULTS'
-  );
-
-  console.log(
-    '=================================================='
-  );
-
-  console.log(
+    'FINAL DIAGNOSTICS:',
     JSON.stringify(
-      metadata.diagnostics,
-      null,
-      2
+      metadata.diagnostics
     )
   );
 
   console.log(
-    `OUTPUT: ${metadata.raceCount} races, ${metadata.rowCount} rows`
+    `OUTPUT: ${raceCount} races, ${totalRows} rows`
   );
 
-  /*
-   * Convert temporary NDJSON into
-   * the normal results.json structure.
-   *
-   * This is streamed and does not load
-   * the entire result set into memory.
-   */
-  await buildFinalJson(
-    ndjsonFile,
-    a.out,
+  await finishStreamingOutput(
+    output,
     metadata
-  );
-
-  /*
-   * Remove temporary file.
-   */
-  try {
-    await fs.unlink(
-      ndjsonFile
-    );
-  } catch {
-    // Ignore cleanup errors.
-  }
-
-  console.log(
-    ''
   );
 
   console.log(
@@ -1904,22 +1780,13 @@ async function main() {
   );
 }
 
-/* ============================================================
-   START
-   ============================================================ */
+main().catch(
+  error => {
+    console.error(
+      'FATAL SCRAPER ERROR:',
+      error
+    );
 
-main().catch(error => {
-  console.error(
-    ''
-  );
-
-  console.error(
-    'FATAL SCRAPER ERROR:'
-  );
-
-  console.error(
-    error
-  );
-
-  process.exit(1);
-});
+    process.exit(1);
+  }
+);
