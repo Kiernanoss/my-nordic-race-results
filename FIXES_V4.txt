@@ -1,0 +1,14 @@
+My Nordic Race Results - v4 fixes
+
+1. Scraper now explicitly visits every Field option exposed by Endurance Promotions instead of relying on the default boys field.
+2. ASP.NET pagination preserves the selected field while moving through page 2+.
+3. Downloaded PDF/TXT result files are parsed in the common Endurance Promotions Place/Bib/Name/Grade/School/Time format, with gender inferred from Boys/Girls headings.
+4. GitHub Actions no longer installs Playwright/Chromium (the scraper uses HTTP requests + PDF parsing). This removes a large source of runner disk usage.
+5. GitHub Actions runs with --expose-gc, --batch-size 10, and --concurrency 4.
+6. The app automatically loads the freshly published results.json on startup instead of depending on stale local imports.
+7. A previous athlete's "Yes, this is me" decision cannot override a newly entered profile.
+8. Exact profile matches do not trigger the unnecessary "Is this you?" review card.
+9. Logging out clears the active athlete profile and match decisions so the next person starts clean.
+10. App-side deduplication keeps field/place/time/bib in the key so distinct results are not accidentally collapsed.
+11. Gender is inferred from field/class codes when the source row does not explicitly provide it.
+12. Scraper diagnostics now report male/female/unknown row counts.
