@@ -1,0 +1,27 @@
+{
+  "matches": [
+
+  ],
+  "generatedAt": "2026-09-15T16:57:55.478Z",
+  "source": "https://www.endurancepromotions.com",
+  "sport": "nordic",
+  "raceCount": 0,
+  "rowCount": 0,
+  "errorCount": 17,
+  "diagnostics": {
+  "racePagesDiscovered": 47,
+  "startRaceKey": 1723,
+  "maxRaceKey": 3000,
+  "nordicRaces": 17,
+  "nordicRacesWithRows": 0,
+  "resultTxtFiles": 0,
+  "resultPdfFiles": 0,
+  "childResultPages": 0,
+  "batchSize": 20,
+  "concurrency": 4,
+  "maleRows": 0,
+  "femaleRows": 0,
+  "unknownGenderRows": 0,
+  "perRace": []
+}
+}
