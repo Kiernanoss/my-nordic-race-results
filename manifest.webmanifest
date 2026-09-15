@@ -1,9 +1,0 @@
-{
-  "name": "My Nordic Race Results",
-  "short_name": "Nordic Results",
-  "start_url": ".",
-  "display": "standalone",
-  "background_color": "#FAFBFC",
-  "theme_color": "#131C2E",
-  "icons": []
-}
