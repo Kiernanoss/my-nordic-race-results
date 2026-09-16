@@ -1039,7 +1039,7 @@
     {"firstName":"Harper","lastName":"Peterson","name":"Harper Peterson","team":"St Cloud Appollo/tech/","school":"St Cloud Appollo/tech/","class":"","field":"","city":"","gender":"F","age":"11","bib":"642","place":50,"time":"23:15.4","timeSeconds":1395.4,"sourceAthleteId":null,"event":"2026 Section 5 Nordic Championships","raceDate":"2/4/2026 9:00:00 AM","raceLocation":"The Trailhead at Wirth","raceType":"Skiing","sourceRaceId":"1739","sourceRaceUrl":"https://www.endurancepromotions.com/ResultDetails.aspx?id=1739","sourceResultUrl":"https://www.endurancepromotions.com/uploads/races/2026_Section_5_Girls_Skate_Results.pdf"},
     {"firstName":"Ellie","lastName":"Prom","name":"Ellie Prom","team":"Anoka","school":"Anoka","class":"","field":"","city":"","gender":"F","age":"9","bib":"641","place":51,"time":"24:15.5","timeSeconds":1455.5,"sourceAthleteId":null,"event":"2026 Section 5 Nordic Championships","raceDate":"2/4/2026 9:00:00 AM","raceLocation":"The Trailhead at Wirth","raceType":"Skiing","sourceRaceId":"1739","sourceRaceUrl":"https://www.endurancepromotions.com/ResultDetails.aspx?id=1739","sourceResultUrl":"https://www.endurancepromotions.com/uploads/races/2026_Section_5_Girls_Skate_Results.pdf"}
   ],
-  "generatedAt": "2026-09-16T22:23:42.862Z",
+  "generatedAt": "2026-09-16T22:35:05.591Z",
   "source": "https://www.endurancepromotions.com",
   "sport": "nordic",
   "raceCount": 8,
