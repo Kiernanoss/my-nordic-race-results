@@ -9247,7 +9247,7 @@
     {"firstName":"Bret","lastName":"Moody","name":"Bret Moody","team":"","school":"","class":"M3039","field":"5K","city":"OSSEO","gender":"M","age":null,"bib":"866","place":null,"time":"23:55.6","timeSeconds":1435.6,"sourceAthleteId":null,"event":"2026 Osseo Lions Roar 5Km","raceDate":"9/12/2026 10:00:00 AM","raceLocation":"Osseo, MN","raceType":"Running","sourceRaceId":"1769","sourceRaceUrl":"https://www.endurancepromotions.com/ResultDetails.aspx?id=1769","sourceResultUrl":"https://www.endurancepromotions.com/ResultDetails.aspx?id=1769"},
     {"firstName":"Joshua Cole","lastName":"McCormick","name":"Joshua Cole McCormick","team":"","school":"","class":"M3039","field":"5K","city":"ANDOVER","gender":"M","age":null,"bib":"851","place":null,"time":"24:28.1","timeSeconds":1468.1,"sourceAthleteId":null,"event":"2026 Osseo Lions Roar 5Km","raceDate":"9/12/2026 10:00:00 AM","raceLocation":"Osseo, MN","raceType":"Running","sourceRaceId":"1769","sourceRaceUrl":"https://www.endurancepromotions.com/ResultDetails.aspx?id=1769","sourceResultUrl":"https://www.endurancepromotions.com/ResultDetails.aspx?id=1769"}
   ],
-  "generatedAt": "2026-09-18T06:38:40.060Z",
+  "generatedAt": "2026-09-18T12:36:53.866Z",
   "source": "https://www.endurancepromotions.com",
   "sport": "nordic",
   "raceCount": 102,
