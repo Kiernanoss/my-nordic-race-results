@@ -1753,7 +1753,7 @@
     {"firstName":"Ani","lastName":"Gess","name":"Ani Gess","team":"","school":"","class":"GMS_SK","field":"GMS_SK","city":"","gender":"F","age":null,"bib":"1","place":null,"time":"05:22.2","timeSeconds":322.2,"sourceAthleteId":null,"event":"2026 IMAC JV Championships","raceDate":"2/6/2026 4:15:00 PM","raceLocation":"Elm Creek Park Reserve","raceType":"Skiing","sourceRaceId":"1740","sourceRaceUrl":"https://www.endurancepromotions.com/ResultDetails.aspx?id=1740","sourceResultUrl":"https://www.endurancepromotions.com/ResultDetails.aspx?id=1740"},
     {"firstName":"Kate","lastName":"Buhr","name":"Kate Buhr","team":"","school":"","class":"GMS_SK","field":"GMS_SK","city":"","gender":"F","age":null,"bib":"230","place":null,"time":"05:23.1","timeSeconds":323.1,"sourceAthleteId":null,"event":"2026 IMAC JV Championships","raceDate":"2/6/2026 4:15:00 PM","raceLocation":"Elm Creek Park Reserve","raceType":"Skiing","sourceRaceId":"1740","sourceRaceUrl":"https://www.endurancepromotions.com/ResultDetails.aspx?id=1740","sourceResultUrl":"https://www.endurancepromotions.com/ResultDetails.aspx?id=1740"}
   ],
-  "generatedAt": "2026-09-20T00:20:27.594Z",
+  "generatedAt": "2026-09-20T00:38:34.911Z",
   "source": "https://www.endurancepromotions.com",
   "sport": "nordic",
   "raceCount": 16,
