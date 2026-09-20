@@ -478,7 +478,7 @@ async function saveState(state) {
 }
 
 const emptyState = {
-  accounts: { mahtnordic: { password: "MHSwintersports", createdAt: new Date().toISOString() } }, // normalized username -> { password, createdAt }
+  accounts: { mahtnordic: { password: "MPSwinter", createdAt: new Date().toISOString() } }, // normalized username -> { password, createdAt }
   sessionEmail: null,
   profile: null,          // { firstName, lastName, preferredName, school, team, city, aliases, athleteId }
   confirmedMatches: {},   // athleteId -> 'me' | 'not-me'
