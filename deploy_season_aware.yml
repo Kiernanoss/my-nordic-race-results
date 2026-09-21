@@ -1,0 +1,77 @@
+name: Build, scrape, and publish NRR
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "17 */6 * * *"
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Scrape Endurance Promotions
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: node --max-old-space-size=6144 scraper.cjs --sport nordic --out public/results.json --start-id 1600 --batch-size 20
+
+      - name: Verify results file
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: |
+          test -f public/results.json
+          node -e "const fs=require('fs'); const d=JSON.parse(fs.readFileSync('public/results.json','utf8')); const seasons=[...new Set((d.matches||[]).map(r=>r.season).filter(Boolean))].sort(); console.log('Races:', d.raceCount); console.log('Rows:', d.rowCount); console.log('Errors:', d.errorCount); console.log('Seasons:', seasons.join(', ')); if (!seasons.includes('2024-2025')) { console.error('2024-2025 season missing from results.json'); process.exit(1); } if ((d.matches||[]).some(r=>!r.season)) { console.error('At least one result is missing a season tag'); process.exit(1); }"
+
+      - name: Commit updated results
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/results.json
+          git diff --cached --quiet || git commit -m "Update race results"
+          git push
+
+      - name: Build website
+        run: npm run build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
