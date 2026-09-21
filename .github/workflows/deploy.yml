@@ -3,10 +3,9 @@ name: Build, scrape, and publish NRR
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
   schedule:
-    - cron: "17 */6 * * *"
+    - cron: "0 */6 * * *"
 
 permissions:
   contents: write
@@ -20,15 +19,15 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Check out repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Node
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: npm
 
       - name: Install dependencies
         run: npm install
@@ -37,40 +36,51 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Scrape Endurance Promotions
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-        run: node --max-old-space-size=6144 scraper.cjs --sport nordic --out public/results.json --start-id 1600 --batch-size 20
+        run: node --max-old-space-size=6144 scraper.cjs --sport nordic --start-id 1668 --max-id 3000 --out public/results.json --batch-size 20
 
-      - name: Verify results file
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+      - name: Verify scraper output
         run: |
-          test -f public/results.json
-          node -e "const fs=require('fs'); const d=JSON.parse(fs.readFileSync('public/results.json','utf8')); const seasons=[...new Set((d.matches||[]).map(r=>r.season).filter(Boolean))].sort(); console.log('Races:', d.raceCount); console.log('Rows:', d.rowCount); console.log('Errors:', d.errorCount); console.log('Seasons:', seasons.join(', ')); if (!seasons.includes('2024-2025')) { console.error('2024-2025 season missing from results.json'); process.exit(1); } if ((d.matches||[]).some(r=>!r.season)) { console.error('At least one result is missing a season tag'); process.exit(1); }"
+          node - <<'NODE'
+          const fs = require('fs');
+          const data = JSON.parse(fs.readFileSync('public/results.json', 'utf8'));
+          const matches = Array.isArray(data.matches) ? data.matches : [];
+          if (!matches.length) throw new Error('Scraper produced no matches.');
+          const missingSeason = matches.filter(r => !r.season).length;
+          if (missingSeason) throw new Error(`Found ${missingSeason} result rows without a season.`);
+          const seasons = [...new Set(matches.map(r => r.season))].sort();
+          console.log(`Verified ${matches.length} result rows across seasons: ${seasons.join(', ')}`);
+          if (!seasons.includes('2024-2025')) throw new Error('2024-2025 season was not found in scraper output.');
+          NODE
 
       - name: Commit updated results
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add public/results.json
-          git diff --cached --quiet || git commit -m "Update race results"
-          git push
+          if git diff --cached --quiet; then
+            echo "No results changes to commit."
+          else
+            git commit -m "Update Nordic results [skip ci]"
+            git push
+          fi
 
-      - name: Build website
+      - name: Build site
         run: npm run build
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: ./dist
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
-
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
