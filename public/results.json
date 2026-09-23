@@ -5394,7 +5394,7 @@
     {"firstName":"Olivia","lastName":"Bakalars","name":"Olivia Bakalars","team":"Rogers","school":"Rogers","class":"GRLY","field":"GRLY","city":"","gender":"F","age":null,"bib":"665/6","place":5,"time":"20:30","timeSeconds":1230,"sourceAthleteId":null,"relay":true,"relayPIH":null,"relayHeat":"Final","relayFinal":true,"event":"2026 Section 5 Nordic Championships","raceDate":"2/4/2026 9:00:00 AM","raceLocation":"The Trailhead at Wirth","raceType":"Skiing","sourceRaceId":"1739","sourceRaceUrl":"https://www.endurancepromotions.com/ResultDetails.aspx?id=1739","sourceResultUrl":"https://www.endurancepromotions.com/uploads/races/2026_section5_girls_final_results.pdf"},
     {"firstName":"Clara","lastName":"Mosley","name":"Clara Mosley","team":"Rogers","school":"Rogers","class":"GRLY","field":"GRLY","city":"","gender":"F","age":null,"bib":"665/6","place":5,"time":"20:30","timeSeconds":1230,"sourceAthleteId":null,"relay":true,"relayPIH":null,"relayHeat":"Final","relayFinal":true,"event":"2026 Section 5 Nordic Championships","raceDate":"2/4/2026 9:00:00 AM","raceLocation":"The Trailhead at Wirth","raceType":"Skiing","sourceRaceId":"1739","sourceRaceUrl":"https://www.endurancepromotions.com/ResultDetails.aspx?id=1739","sourceResultUrl":"https://www.endurancepromotions.com/uploads/races/2026_section5_girls_final_results.pdf"}
   ],
-  "generatedAt": "2026-09-23T15:18:46.689Z",
+  "generatedAt": "2026-09-23T16:15:36.029Z",
   "source": "https://www.endurancepromotions.com",
   "sport": "nordic",
   "raceCount": 49,
