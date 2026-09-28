@@ -5,6 +5,8 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - "public/results.json"
   schedule:
     - cron: "0 */6 * * *"
 
