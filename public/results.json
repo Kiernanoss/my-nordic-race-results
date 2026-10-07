@@ -5394,7 +5394,7 @@
     {"firstName":"Annika","lastName":"Hauck","name":"Annika Hauck","team":"Hastings","school":"Hastings","class":"GRLY","field":"GRLY","city":"","gender":"F","age":null,"bib":"2","place":6,"time":"18:43","timeSeconds":1123,"sourceAthleteId":null,"relay":true,"relayPIH":null,"relayHeat":"Final","relayFinal":true,"event":"2026 Section 1 Nordic Championships","raceDate":"2/3/2026 9:00:00 AM","raceLocation":"Hyland Lake Park Reserve","raceType":"Skiing","sourceRaceId":"1737","sourceRaceUrl":"https://www.endurancepromotions.com/ResultDetails.aspx?id=1737","sourceResultUrl":"https://www.endurancepromotions.com/uploads/races/2026_Section1_Final_Results_Girls.pdf"},
     {"firstName":"Denae","lastName":"Trost","name":"Denae Trost","team":"Hastings","school":"Hastings","class":"GRLY","field":"GRLY","city":"","gender":"F","age":null,"bib":"2","place":6,"time":"18:43","timeSeconds":1123,"sourceAthleteId":null,"relay":true,"relayPIH":null,"relayHeat":"Final","relayFinal":true,"event":"2026 Section 1 Nordic Championships","raceDate":"2/3/2026 9:00:00 AM","raceLocation":"Hyland Lake Park Reserve","raceType":"Skiing","sourceRaceId":"1737","sourceRaceUrl":"https://www.endurancepromotions.com/ResultDetails.aspx?id=1737","sourceResultUrl":"https://www.endurancepromotions.com/uploads/races/2026_Section1_Final_Results_Girls.pdf"}
   ],
-  "generatedAt": "2026-10-07T06:19:03.170Z",
+  "generatedAt": "2026-10-07T12:10:54.558Z",
   "source": "https://www.endurancepromotions.com",
   "sport": "nordic",
   "raceCount": 49,
