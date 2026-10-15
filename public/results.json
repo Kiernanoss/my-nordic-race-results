@@ -5478,7 +5478,7 @@
     {"firstName":"Brian","lastName":"Hawthorne","name":"Brian Hawthorne","team":"","school":"","class":"Intermediate/Advanced","field":"Intermediate/Advanced","distanceKm":null,"city":"MINNEAPOLIS","gender":null,"age":null,"bib":"130","place":null,"time":"20.133","timeSeconds":null,"sourceAthleteId":"177538","event":"2026 Roadrunner CX","raceDate":"10/13/2026 5:30:00 PM","raceLocation":"The Trailhead - Loppet","raceType":"Cycling","sourceRaceId":"1773","sourceRaceUrl":"https://www.endurancepromotions.com/ResultDetails.aspx?id=1773","sourceResultUrl":"https://www.endurancepromotions.com/ResultDetails.aspx?id=1773"},
     {"firstName":"Arthur","lastName":"Spanjers","name":"Arthur Spanjers","team":"","school":"","class":"Intermediate/Advanced","field":"Intermediate/Advanced","distanceKm":null,"city":"MINNEAPOLIS","gender":null,"age":null,"bib":"996","place":5,"time":"49:09.7","timeSeconds":2949.7,"sourceAthleteId":"177409","event":"2026 Roadrunner CX","raceDate":"10/13/2026 5:30:00 PM","raceLocation":"The Trailhead - Loppet","raceType":"Cycling","sourceRaceId":"1773","sourceRaceUrl":"https://www.endurancepromotions.com/ResultDetails.aspx?id=1773","sourceResultUrl":"https://www.endurancepromotions.com/ResultDetails.aspx?id=1773"}
   ],
-  "generatedAt": "2026-10-14T21:24:37.537Z",
+  "generatedAt": "2026-10-15T03:41:28.220Z",
   "source": "https://www.endurancepromotions.com",
   "sport": "nordic",
   "raceCount": 50,
