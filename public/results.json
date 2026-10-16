@@ -5478,7 +5478,7 @@
     {"firstName":"Clara","lastName":"Mosley","name":"Clara Mosley","team":"Rogers","school":"Rogers","class":"GRLY","field":"GRLY","city":"","gender":"F","age":null,"bib":"665/6","place":5,"time":"20:30","timeSeconds":1230,"sourceAthleteId":null,"relay":true,"relayPIH":null,"relayHeat":"Final","relayFinal":true,"event":"2026 Section 5 Nordic Championships","raceDate":"2/4/2026 9:00:00 AM","raceLocation":"The Trailhead at Wirth","raceType":"Skiing","sourceRaceId":"1739","sourceRaceUrl":"https://www.endurancepromotions.com/ResultDetails.aspx?id=1739","sourceResultUrl":"https://www.endurancepromotions.com/uploads/races/2026_section5_girls_final_results.pdf"},
     {"firstName":"Arthur","lastName":"Spanjers","name":"Arthur Spanjers","team":"","school":"","class":"Intermediate/Advanced","field":"Intermediate/Advanced","distanceKm":null,"city":"MINNEAPOLIS","gender":null,"age":null,"bib":"996","place":5,"time":"49:09.7","timeSeconds":2949.7,"sourceAthleteId":"177409","event":"2026 Roadrunner CX","raceDate":"10/13/2026 5:30:00 PM","raceLocation":"The Trailhead - Loppet","raceType":"Cycling","sourceRaceId":"1773","sourceRaceUrl":"https://www.endurancepromotions.com/ResultDetails.aspx?id=1773","sourceResultUrl":"https://www.endurancepromotions.com/ResultDetails.aspx?id=1773"}
   ],
-  "generatedAt": "2026-10-16T16:17:30.827Z",
+  "generatedAt": "2026-10-16T20:40:37.218Z",
   "source": "https://www.endurancepromotions.com",
   "sport": "nordic",
   "raceCount": 50,
