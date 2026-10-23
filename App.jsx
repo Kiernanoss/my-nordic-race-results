@@ -2111,7 +2111,7 @@ function graphRaceLevel(row) {
 /* ============================================================================
    DASHBOARD
 ============================================================================ */
-const TWIN_WEB_APP_URL = "PASTE_YOUR_DEPLOYED_APPS_SCRIPT_WEB_APP_URL_HERE";
+const TWIN_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzfrGRSgX3c3rG6MSIlcKgo9LdHrjhtzdc0nnm2Q8MTChZbrdwhbVDhjrUBiUUxRGWCJw/exec";
 
 function useTwinFeed() {
   const [feed, setFeed] = useState({events:[], upcoming:[], additionalInfo:[], documents:[], loading:true, error:""});
