@@ -2114,7 +2114,7 @@ function graphRaceLevel(row) {
 /* ============================================================================
    DASHBOARD
 ============================================================================ */
-const TWIN_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzfrGRSgX3c3rG6MSIlcKgo9LdHrjhtzdc0nnm2Q8MTChZbrdwhbVDhjrUBiUUxRGWCJw/exec";
+const TWIN_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw2dV14EgZjLb21u2qaz-3mswKqwUnw4BdVoqQfzp6264qGKbbzOivo_kMEdyBQr_NVmQ/exec";
 
 // Keep the successful response in memory while the website remains open.
 // Navigating away from and back to the dashboard reuses it; a full page refresh
