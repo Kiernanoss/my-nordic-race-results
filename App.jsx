@@ -1896,7 +1896,23 @@ export default function App() {
 
   const selectedRace = selectedRaceId ? combined.races.find((r) => r.id === selectedRaceId) : null;
   const raceMyResult = selectedRace ? selectedRace.results.find((r) => confirmedMeIds.has(r.athleteId)) : null;
-  const raceTeamResults = selectedRace ? selectedRace.results.filter((r) => r.team === appState.profile.team).sort((a, b) => a.overallPosition - b.overallPosition) : [];
+  const raceTeamResults = selectedRace
+    ? selectedRace.results
+        .filter((r) => r.team === appState.profile.team)
+        .sort((a, b) => {
+          const classOrder = (result) => {
+            const classKey = rosterClassKey(
+              [result.field, result.gender, result.class].filter(Boolean).join(" "),
+              selectedRace.raceName
+            );
+            const index = ROSTER_CLASS_ORDER.indexOf(classKey);
+            return index === -1 ? ROSTER_CLASS_ORDER.length : index;
+          };
+          const classDifference = classOrder(a) - classOrder(b);
+          if (classDifference !== 0) return classDifference;
+          return Number(a.overallPosition) - Number(b.overallPosition);
+        })
+    : [];
 
   return (
     <div className="nrr-root min-h-screen flex">
