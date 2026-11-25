@@ -1558,18 +1558,40 @@ function RacePage({ race, myResult, profile, goto, teamResults, myResults = [], 
       {teamResults.length > 0 && (
         <Card className="p-6">
           <h3 className="font-medium mb-4">My Team — {profile.team}</h3>
-          <div className="flex flex-col divide-y" style={{ borderColor: "var(--border-soft)" }}>
-            {teamResults.map((r) => (
-              <div key={r.id} className="flex items-center justify-between py-2.5 text-sm">
-                <div className="flex items-center gap-3">
-                  <span className="nrr-num w-8" style={{ color: "var(--slate)" }}>{r.overallPosition}</span>
-                  <span className={r.athleteId === myResult?.athleteId ? "font-semibold" : ""}>{r.firstName} {r.lastName}{r.athleteId === myResult?.athleteId ? " (me)" : ""}</span>
+          <div className="flex flex-col gap-4">
+            {ROSTER_CLASS_ORDER.map((classKey) => {
+              const labels = {
+                GVAR: "Girls Varsity",
+                BVAR: "Boys Varsity",
+                GJV: "Girls JV",
+                BJV: "Boys JV",
+              };
+              const rows = teamResults.filter((r) =>
+                rosterClassKey(`${r.field || ""} ${r.class || ""}`, race.raceName) === classKey
+              );
+
+              return (
+                <div key={classKey}>
+                  <h4 className="font-medium text-sm mb-2">{labels[classKey]}</h4>
+                  {rows.length === 0 ? (
+                    <div className="text-xs py-2" style={{ color: "var(--slate)" }}>No athletes in this group.</div>
+                  ) : (
+                    <div className="flex flex-col divide-y" style={{ borderColor: "var(--border-soft)" }}>
+                      {rows.map((r) => (
+                        <div key={r.id} className="flex items-center justify-between py-2.5 text-sm">
+                          <div className="flex items-center gap-3">
+                            <span className="nrr-num w-8" style={{ color: "var(--slate)" }}>{r.overallPosition}</span>
+                            <span className={r.athleteId === myResult?.athleteId ? "font-semibold" : ""}>{r.firstName} {r.lastName}{r.athleteId === myResult?.athleteId ? " (me)" : ""}</span>
+                          </div>
+                          <span className="nrr-num" style={{ color: "var(--slate)" }}>{r.totalTime}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <span className="nrr-num" style={{ color: "var(--slate)" }}>{r.totalTime}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
-          <div className="text-xs mt-3" style={{ color: "var(--slate)" }}></div>
         </Card>
       )}
 
@@ -1896,7 +1918,25 @@ export default function App() {
 
   const selectedRace = selectedRaceId ? combined.races.find((r) => r.id === selectedRaceId) : null;
   const raceMyResult = selectedRace ? selectedRace.results.find((r) => confirmedMeIds.has(r.athleteId)) : null;
-  const raceTeamResults = selectedRace ? selectedRace.results.filter((r) => r.team === appState.profile.team).sort((a, b) => a.overallPosition - b.overallPosition) : [];
+  const raceTeamResults = selectedRace
+    ? selectedRace.results
+        .filter((r) => r.team === appState.profile.team)
+        .sort((a, b) => {
+          const classA = rosterClassKey(`${a.field || ""} ${a.class || ""}`, selectedRace.raceName);
+          const classB = rosterClassKey(`${b.field || ""} ${b.class || ""}`, selectedRace.raceName);
+          const classDifference = ROSTER_CLASS_ORDER.indexOf(classA) - ROSTER_CLASS_ORDER.indexOf(classB);
+          if (classDifference !== 0) return classDifference;
+
+          // Match Team Roster: fastest to slowest within each category.
+          const timeA = Number(a.totalTimeSec);
+          const timeB = Number(b.totalTimeSec);
+          const aValid = Number.isFinite(timeA);
+          const bValid = Number.isFinite(timeB);
+          if (aValid && bValid && timeA !== timeB) return timeA - timeB;
+          if (aValid !== bValid) return aValid ? -1 : 1;
+          return `${a.lastName} ${a.firstName}`.localeCompare(`${b.lastName} ${b.firstName}`);
+        })
+    : [];
 
   return (
     <div className="nrr-root min-h-screen flex">
