@@ -1029,6 +1029,11 @@ function FullResultsTable({ race, myAthleteId }) {
     return matchesQ && matchesTeam && matchesClass;
   });
 
+  const resultClassOrder = ["GVAR", "BVAR", "GJV Skate", "BJV Skate", "GJV Classic", "BJV Classic"];
+  const groupedRows = resultClassOrder
+    .map((className) => ({ className, rows: rows.filter((r) => r.class === className) }))
+    .filter((group) => group.rows.length > 0);
+
   return (
     <div>
       <div className="flex flex-wrap gap-2 mb-4">
@@ -1057,16 +1062,23 @@ function FullResultsTable({ race, myAthleteId }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b" style={{ borderColor: "var(--border-soft)", background: r.athleteId === myAthleteId ? "var(--ice-soft)" : "transparent" }}>
-                <td className="py-2 nrr-num">{r.overallPosition}</td>
-                <td className="py-2">{r.firstName} {r.lastName}</td>
-                <td className="py-2" style={{ color: "var(--slate)" }}>{r.team}</td>
-                <td className="py-2"><Pill>{r.class}</Pill></td>
-                <td className="py-2 nrr-num" style={{ color: "var(--slate)" }}>{r.bib}</td>
-                <td className="py-2 text-right nrr-num">{r.totalTime}</td>
-                <td className="py-2 text-right nrr-num" style={{ color: "var(--slate)" }}>{gapLabel(r.timeGapSec)}</td>
-              </tr>
+            {groupedRows.map((group) => (
+              <React.Fragment key={group.className}>
+                <tr className="border-b" style={{ borderColor: "var(--border)" }}>
+                  <td colSpan={7} className="pt-3 pb-1 font-medium" style={{ color: "var(--slate)" }}>{group.className}</td>
+                </tr>
+                {group.rows.map((r) => (
+                  <tr key={r.id} className="border-b" style={{ borderColor: "var(--border-soft)", background: r.athleteId === myAthleteId ? "var(--ice-soft)" : "transparent" }}>
+                    <td className="py-2 nrr-num">{r.overallPosition}</td>
+                    <td className="py-2">{r.firstName} {r.lastName}</td>
+                    <td className="py-2" style={{ color: "var(--slate)" }}>{r.team}</td>
+                    <td className="py-2"><Pill>{r.class}</Pill></td>
+                    <td className="py-2 nrr-num" style={{ color: "var(--slate)" }}>{r.bib}</td>
+                    <td className="py-2 text-right nrr-num">{r.totalTime}</td>
+                    <td className="py-2 text-right nrr-num" style={{ color: "var(--slate)" }}>{gapLabel(r.timeGapSec)}</td>
+                  </tr>
+                ))}
+              </React.Fragment>
             ))}
           </tbody>
         </table>
